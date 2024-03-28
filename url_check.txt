@@ -1,0 +1,60 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+
+public class HoneypotIDS2 {
+
+    private static final String FAKE_URLS_FILE_PATH = "fake_urls.csv";
+    private static final String BLOCKED_IPS_FILE_PATH = "blocked_ips.txt";
+
+    public static void main(String[] args) {
+        Set<String> fakeURLs = loadFakeURLsFromCSV(FAKE_URLS_FILE_PATH);
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print("Enter the URL to simulate access attempt (or type 'exit' to quit): ");
+            String url = scanner.nextLine();
+            if (url.equalsIgnoreCase("exit")) {
+                break;
+            }
+            if (fakeURLs.contains(url)) {
+                String ip = getRandomIP();
+                blockIP(ip);
+                System.out.println("The IP address " + ip + " has been blocked for accessing the fake URL.");
+            } else {
+                System.out.println("The URL is not fake.");
+            }
+        }
+        scanner.close();
+    }
+
+    private static Set<String> loadFakeURLsFromCSV(String filePath) {
+        Set<String> fakeURLs = new HashSet<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                fakeURLs.add(line.trim());
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading fake URLs from CSV file: " + e.getMessage());
+        }
+        return fakeURLs;
+    }
+
+    private static String getRandomIP() {
+        Random random = new Random();
+        return random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256);
+    }
+
+    private static void blockIP(String ip) {
+        try (FileWriter writer = new FileWriter(BLOCKED_IPS_FILE_PATH, true)) {
+            writer.write(ip + "\n");
+        } catch (IOException e) {
+            System.err.println("Error writing to blocked IPs file: " + e.getMessage());
+        }
+    }
+}
