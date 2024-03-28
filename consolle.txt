@@ -1,0 +1,100 @@
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Random;
+import java.util.Scanner;
+import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+public class HoneypotIDS {
+
+    public static void main(String[] args) {
+        // Create and start the honeypot
+        Honeypot honeypot = new Honeypot();
+        honeypot.start();
+
+        // Simulate access attempts
+        simulateAccessAttempts(honeypot);
+    }
+
+    private static void simulateAccessAttempts(Honeypot honeypot) {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            try {
+                // Prompt user for URL input
+                System.out.print("Enter the URL to simulate access attempt: ");
+                String url = scanner.nextLine();
+
+                // Simulate access attempt
+                honeypot.logAccessAttempt(getRandomIP() + " accessed the honeypot with URL: " + url);
+
+                // Check if URL matches honeypot's URL
+                if (honeypot.isHoneypotURL(url)) {
+                    honeypot.blockIP(getRandomIP());
+                    System.out.println("The IP address has been blocked.");
+                }
+                
+                // Sleep for random duration between 1 to 5 seconds
+                TimeUnit.SECONDS.sleep(new Random().nextInt(5) + 1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static String getRandomIP() {
+        // Generate a random IP address
+        Random random = new Random();
+        return random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256);
+    }
+}
+
+class Honeypot {
+    private static final String HONEYPOT_URL = "http://your-honeypot-url.com/";
+    private static final String LOG_FILE_PATH = "honeypot_logs.txt";
+    private Set<String> blockedIPs;
+
+    public Honeypot() {
+        this.blockedIPs = new HashSet<>();
+    }
+
+    public void start() {
+        // Initialize the honeypot
+        logAccessAttempt("Honeypot started.");
+    }
+
+    public void logAccessAttempt(String message) {
+        // Log access attempt with timestamp
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        String logMessage = timestamp + " - " + message;
+
+        // Write log message to file
+        try (FileWriter writer = new FileWriter(LOG_FILE_PATH, true)) {
+            writer.write(logMessage + "\n");
+        } catch (IOException e) {
+            System.err.println("Error writing to log file: " + e.getMessage());
+        }
+    }
+
+    public boolean isHoneypotURL(String url) {
+        // Check if URL matches honeypot's URL
+        return url.equals(HONEYPOT_URL);
+    }
+
+    public void blockIP(String ip) {
+        // Block IP address
+        blockedIPs.add(ip);
+    }
+
+    public boolean isIPBlocked(String ip) {
+        // Check if IP address is blocked
+        return blockedIPs.contains(ip);
+    }
+}
+
+
+
+
+
