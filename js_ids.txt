@@ -1,0 +1,109 @@
+<%@ page import="java.io.FileWriter, java.io.IOException, java.text.SimpleDateFormat, java.util.Date, java.util.HashSet, java.util.Random, java.util.Set, java.util.concurrent.TimeUnit" %>
+<%@ page contentType="text/html; charset=UTF-8" language="java" %>
+<%@ page import="java.util.Scanner" %>
+<%@ page import="java.util.HashMap" %>
+<%@ page import="java.util.Map" %>
+<%@ page import="java.util.List" %>
+<%@ page import="java.util.ArrayList" %>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Honeypot Web Application</title>
+</head>
+<body>
+    <h1>Honeypot Web Application</h1>
+    
+    <%
+        // Honeypot class implementation
+        class Honeypot {
+            private static final String HONEYPOT_URL = "http://your-honeypot-url.com/";
+            private static final String LOG_FILE_PATH = "honeypot_logs.txt";
+            private Set<String> blockedIPs;
+
+            public Honeypot() {
+                this.blockedIPs = new HashSet<>();
+            }
+
+            public void start() {
+                // Initialize the honeypot
+                logAccessAttempt("Honeypot started.");
+            }
+
+            public void logAccessAttempt(String message) {
+                // Log access attempt with timestamp
+                String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+                String logMessage = timestamp + " - " + message;
+
+                // Write log message to file
+                try (FileWriter writer = new FileWriter(LOG_FILE_PATH, true)) {
+                    writer.write(logMessage + "\n");
+                } catch (IOException e) {
+                    System.err.println("Error writing to log file: " + e.getMessage());
+                }
+            }
+
+            public boolean isHoneypotURL(String url) {
+                // Check if URL matches honeypot's URL
+                return url.equals(HONEYPOT_URL);
+            }
+
+            public void blockIP(String ip) {
+                // Block IP address
+                blockedIPs.add(ip);
+            }
+
+            public boolean isIPBlocked(String ip) {
+                // Check if IP address is blocked
+                return blockedIPs.contains(ip);
+            }
+        }
+
+        // Main logic for simulating access attempts
+        Scanner scanner = new Scanner(System.in);
+        String simulationResult = "";
+        String url = "";
+        while (true) {
+            try {
+                // Prompt user for URL input
+                out.print("Enter the URL to simulate access attempt: ");
+                url = scanner.nextLine();
+
+                // Simulate access attempt
+                String accessAttemptMessage = getRandomIP() + " accessed the honeypot with URL: " + url;
+                new Honeypot().logAccessAttempt(accessAttemptMessage);
+
+                // Check if URL matches honeypot's URL
+                if (new Honeypot().isHoneypotURL(url)) {
+                    new Honeypot().blockIP(getRandomIP());
+                    simulationResult = "The IP address has been blocked.";
+                } else {
+                    simulationResult = "Access simulated. URL: " + url;
+                }
+                
+                // Sleep for random duration between 1 to 5 seconds
+                TimeUnit.SECONDS.sleep(new Random().nextInt(5) + 1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // Generate a random IP address
+        String getRandomIP() {
+            Random random = new Random();
+            return random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256);
+        }
+    %>
+    
+    <form action="" method="post">
+        Enter URL: <input type="text" name="url"><br>
+        <input type="submit" value="Simulate Access">
+    </form>
+    <br>
+    <div>
+        <h2>Simulation Result:</h2>
+        <pre><%=simulationResult%></pre>
+    </div>
+</body>
+</html>
