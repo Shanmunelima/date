@@ -1,0 +1,62 @@
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
+public class FakeURLGenerator {
+
+    private static final String FAKE_URLS_FILE_PATH = "fake_urls.csv";
+    private static final String[] WORDS = {"example", "dummy", "test", "fake", "mock", "sandbox", "trial",
+                                           "alpha", "beta", "gamma", "delta", "epsilon", "zeta", "eta", "theta",
+                                           "lambda", "mu", "nu", "xi", "omicron", "pi", "rho", "sigma", "tau",
+                                           "upsilon", "phi", "chi", "psi", "omega"};
+
+    public static void main(String[] args) {
+        // Generate fake URLs, IP addresses, and port numbers
+        List<String> fakeURLs = generateFakeURLs(1000);
+
+        // Write fake URLs, IP addresses, and port numbers to CSV file
+        writeFakeURLsToCSV(fakeURLs);
+    }
+
+    private static List<String> generateFakeURLs(int count) {
+        List<String> fakeURLs = new ArrayList<>();
+        for (int i = 0; i < count; i++) {
+            String ip = getRandomIP();
+            int port = getRandomPort();
+            String fakeURL = "http://" + getRandomWord() + (i + 1) + ".com"  ;
+            fakeURLs.add(fakeURL + "," + ip + "," + port);
+        }
+        return fakeURLs;
+    }
+
+    private static String getRandomWord() {
+        // Generate a random word from the WORDS array
+        Random random = new Random();
+        return WORDS[random.nextInt(WORDS.length)];
+    }
+
+    private static String getRandomIP() {
+        // Generate a random IP address
+        Random random = new Random();
+        return random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256);
+    }
+
+    private static int getRandomPort() {
+        // Generate a random port number between 8000 and 9000
+        Random random = new Random();
+        return random.nextInt(1000) + 8000;
+    }
+
+    private static void writeFakeURLsToCSV(List<String> fakeURLs) {
+        try (FileWriter writer = new FileWriter(FAKE_URLS_FILE_PATH)) {
+            for (String line : fakeURLs) {
+                writer.write(line + "\n");
+            }
+            System.out.println("Fake URLs, IP addresses, and port numbers have been written to: " + FAKE_URLS_FILE_PATH);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+}
