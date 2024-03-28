@@ -1,0 +1,78 @@
+<%@ page import="java.io.FileWriter" %>
+<%@ page import="java.io.IOException" %>
+<%@ page import="java.util.Random" %>
+<%@ page import="java.util.Scanner" %>
+
+<%
+    String FAKE_URLS_FILE_PATH = "fake_urls.csv";
+    String LOG_FILE_PATH = "honeypot_logs.txt";
+    String BLOCKED_IPS_FILE_PATH = "blocked_ips.txt";
+    String[] fakeURLs = loadFakeURLsFromCSV();
+    String[] blockedIPs = loadBlockedIPsFromFile();
+
+    String[] loadFakeURLsFromCSV() {
+        try (Scanner scanner = new Scanner(getClass().getResourceAsStream(FAKE_URLS_FILE_PATH))) {
+            StringBuilder urls = new StringBuilder();
+            while (scanner.hasNextLine()) {
+                urls.append(scanner.nextLine().trim()).append(",");
+            }
+            return urls.toString().split(",");
+        } catch (Exception e) {
+            System.err.println("Error reading fake URLs from CSV file: " + e.getMessage());
+            return new String[0];
+        }
+    }
+
+    String[] loadBlockedIPsFromFile() {
+        try (Scanner scanner = new Scanner(getClass().getResourceAsStream(BLOCKED_IPS_FILE_PATH))) {
+            StringBuilder ips = new StringBuilder();
+            while (scanner.hasNextLine()) {
+                ips.append(scanner.nextLine().trim()).append(",");
+            }
+            return ips.toString().split(",");
+        } catch (Exception e) {
+            System.err.println("Error reading blocked IPs from file: " + e.getMessage());
+            return new String[0];
+        }
+    }
+
+    String getRandomIP() {
+        Random random = new Random();
+        return random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256);
+    }
+
+    void blockIP(String ip) {
+        try (FileWriter writer = new FileWriter(BLOCKED_IPS_FILE_PATH, true)) {
+            writer.write(ip + "\n");
+        } catch (IOException e) {
+            System.err.println("Error writing to blocked IPs file: " + e.getMessage());
+        }
+    }
+%>
+
+<%
+    Scanner scanner = new Scanner(System.in);
+    while (true) {
+        out.print("Enter the URL to simulate access attempt (or type 'exit' to quit): ");
+        String url = scanner.nextLine();
+        if (url.equalsIgnoreCase("exit")) {
+            break;
+        }
+        out.println("Access attempt with URL: " + url);
+        if (contains(fakeURLs, url)) {
+            String ip = getRandomIP();
+            blockIP(ip);
+            out.println("The IP address " + ip + " has been blocked.");
+        }
+    }
+    scanner.close();
+
+    boolean contains(String[] array, String value) {
+        for (String str : array) {
+            if (str.equals(value)) {
+                return true;
+            }
+        }
+        return false;
+    }
+%>
