@@ -1,0 +1,44 @@
+import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.TimeZone;
+
+public class Main {
+    public static void main(String[] args) throws ParseException {
+        // Get current date and time
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeZone(TimeZone.getTimeZone("UTC")); // Set time zone to UTC
+        java.sql.Timestamp currentTimestamp = new java.sql.Timestamp(cal.getTime().getTime());
+
+        // Add ten minutes
+        cal.add(Calendar.MINUTE, 10);
+        java.sql.Timestamp tenMinutesLater = new java.sql.Timestamp(cal.getTime().getTime());
+
+        // Format timestamps as strings
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC")); // Set the time zone to UTC
+        String currentTimestampString = sdf.format(new Date(currentTimestamp.getTime()));
+        String tenMinutesLaterString = sdf.format(new Date(tenMinutesLater.getTime()));
+
+        System.out.println(tenMinutesLaterString);
+        
+        // Parse tenMinutesLaterString to Date object
+        Date tenMinutesLaterDate = sdf.parse(tenMinutesLaterString);
+
+        // Get current time as Date object
+        Date currentTime = new Date();
+        
+        // Print out the parsed date values for debugging
+        System.out.println("Parsed ten minutes later date: " + sdf.format(tenMinutesLaterDate));
+        System.out.println("Current time: " + sdf.format(currentTime));
+
+        // Compare tenMinutesLaterDate with currentTime
+        if (tenMinutesLaterDate.compareTo(currentTime) >0) {
+            System.out.println("No");
+        } else {
+            System.out.println("Yes");
+        }
+    }
+}
