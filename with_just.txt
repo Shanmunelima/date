@@ -1,0 +1,177 @@
+import java.io.*;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
+public class HoneypotIDS {
+
+    public static void main(String[] args) {
+        // Read fake URLs from CSV file
+        Set<String> fakeURLs = readFakeURLsFromCSV("fake_urls.csv");
+        if (fakeURLs.isEmpty()) {
+            System.err.println("No fake URLs found in the CSV file.");
+            return;
+        }
+
+        // Create and start the honeypot
+        Honeypot honeypot = new Honeypot(fakeURLs);
+        honeypot.start();
+
+        // Simulate access attempts
+        simulateAccessAttempts(honeypot);
+    }
+
+    private static Set<String> readFakeURLsFromCSV(String filePath) {
+        Set<String> fakeURLs = new HashSet<>();
+        try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                fakeURLs.add(line.trim());
+            }
+        } catch (IOException e) {
+            System.err.println("Error reading CSV file: " + e.getMessage());
+        }
+        return fakeURLs;
+    }
+
+    private static void simulateAccessAttempts(Honeypot honeypot) {
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            try {
+                // Prompt user for URL input
+                System.out.print("Enter the URL to simulate access attempt: ");
+                String url = scanner.nextLine();
+
+                // Simulate access attempt
+                honeypot.logAccessAttempt(getRandomIP() + " accessed the honeypot with URL: " + url);
+
+                // Check if URL matches honeypot's URL
+                if (honeypot.isHoneypotURL(url)) {
+                    honeypot.blockIP(getRandomIP());
+                    System.out.println("The IP address has been blocked.");
+                }
+
+                // Sleep for random duration between 1 to 5 seconds
+                Thread.sleep(new Random().nextInt(5) + 1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private static String getRandomIP() {
+        // Generate a random IP address
+        Random random = new Random();
+        return random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256) + "." + random.nextInt(256);
+    }
+}
+
+class Honeypot {
+    private final Set<String> fakeURLs;
+    private static final String LOG_FILE_PATH = "honeypot_logs.txt";
+    private Set<String> blockedIPs;
+
+    public Honeypot(Set<String> fakeURLs) {
+        this.fakeURLs = fakeURLs;
+        this.blockedIPs = new HashSet<>();
+    }
+
+    public void start() {
+        // Initialize the honeypot
+        logAccessAttempt("Honeypot started.");
+    }
+
+    public void logAccessAttempt(String message) {
+        // Log access attempt with timestamp
+        String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+        String logMessage = timestamp + " - " + message;
+
+        // Write log message to file
+        try (FileWriter writer = new FileWriter(LOG_FILE_PATH, true)) {
+            writer.write(logMessage + "\n");
+        } catch (IOException e) {
+            System.err.println("Error writing to log file: " + e.getMessage());
+        }
+    }
+
+    public boolean isHoneypotURL(String url) {
+        // Check if URL matches any of the fake URLs
+        return fakeURLs.contains(url);
+    }
+
+    public void blockIP(String ip) {
+        // Block IP address
+        blockedIPs.add(ip);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Certainly! Let's break down the provided code and understand its functionality:
+
+### Main Class (`HoneypotIDS`):
+
+1. **`main` method**:
+   - The program starts execution from the `main` method.
+   - It begins by reading fake URLs from a CSV file named "fake_urls.csv" using the `readFakeURLsFromCSV` method.
+   - Then, it creates an instance of the `Honeypot` class, passing the set of fake URLs obtained from the CSV file.
+   - After initializing the `Honeypot` instance, it starts simulating access attempts using the `simulateAccessAttempts` method.
+
+2. **`readFakeURLsFromCSV` method**:
+   - This method reads fake URLs from a CSV file.
+   - It takes the file path as input, reads each line from the CSV file, trims it, and adds it to a `Set<String>` containing the fake URLs.
+   - It returns the set of fake URLs read from the CSV file.
+
+3. **`simulateAccessAttempts` method**:
+   - This method simulates access attempts by continuously prompting the user for a URL input.
+   - It then logs the access attempt and checks if the provided URL matches any fake URLs.
+   - If a match is found, it blocks a randomly generated IP address and notifies the user.
+   - Finally, it sleeps for a random duration between 1 to 5 seconds before repeating the process.
+
+### Honeypot Class:
+
+1. **Instance Variables**:
+   - `fakeURLs`: A set containing the fake URLs read from the CSV file.
+   - `blockedIPs`: A set containing the blocked IP addresses.
+
+2. **Constructor**:
+   - Initializes the `fakeURLs` set with the fake URLs provided as input.
+   - Initializes the `blockedIPs` set.
+
+3. **`start` method**:
+   - Logs the start of the honeypot.
+
+4. **`logAccessAttempt` method**:
+   - Logs an access attempt with a timestamp.
+   - Writes the log message to a file named "honeypot_logs.txt".
+
+5. **`isHoneypotURL` method**:
+   - Checks if the provided URL matches any of the fake URLs.
+   - Returns `true` if a match is found, indicating that the URL is a honeypot URL.
+
+6. **`blockIP` method**:
+   - Adds the provided IP address to the set of blocked IP addresses.
+
+7. **`isIPBlocked` method**:
+   - Checks if the provided IP address is blocked.
+   - Returns `true` if the IP address is found in the set of blocked IP addresses.
+
+This code simulates a simple honeypot intrusion detection system where access attempts are logged, fake URLs are checked against incoming URLs, and potentially malicious IPs are blocked. The fake URLs are read from a CSV file, allowing for easy management and customization.
+
+    public boolean isIPBlocked(String ip) {
+        // Check if IP address is blocked
+        return blockedIPs.contains(ip);
+    }
+}
