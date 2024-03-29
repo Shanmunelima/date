@@ -1,0 +1,134 @@
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import javax.crypto.*;
+import javax.crypto.spec.*;
+import java.io.*;
+import java.security.*;
+
+public class ImageEncryptionExample {
+
+    public static void main(String[] args) throws Exception {
+        // Add BouncyCastleProvider as a security provider
+        Security.addProvider(new BouncyCastleProvider());
+
+        // Generate Alice's key pair
+        KeyPairGenerator aliceKpg = KeyPairGenerator.getInstance("EC", "BC");
+        aliceKpg.initialize(256);
+        KeyPair aliceKeyPair = aliceKpg.generateKeyPair();
+
+        // Generate Bob's key pair
+        KeyPairGenerator bobKpg = KeyPairGenerator.getInstance("EC", "BC");
+        bobKpg.initialize(256);
+        KeyPair bobKeyPair = bobKpg.generateKeyPair();
+
+        // Alice's ECDH key agreement
+        KeyAgreement aliceKeyAgree = KeyAgreement.getInstance("ECDH", "BC");
+        aliceKeyAgree.init(aliceKeyPair.getPrivate());
+        aliceKeyAgree.doPhase(bobKeyPair.getPublic(), true);
+
+        // Bob's ECDH key agreement
+        KeyAgreement bobKeyAgree = KeyAgreement.getInstance("ECDH", "BC");
+        bobKeyAgree.init(bobKeyPair.getPrivate());
+        bobKeyAgree.doPhase(aliceKeyPair.getPublic(), true);
+
+        // Generate shared secret for Alice
+        byte[] aliceSharedSecret = aliceKeyAgree.generateSecret();
+
+        // Generate shared secret for Bob
+        byte[] bobSharedSecret = bobKeyAgree.generateSecret();
+
+        // Both shared secrets should be equal
+        if (!MessageDigest.isEqual(aliceSharedSecret, bobSharedSecret)) {
+            throw new Exception("Shared secrets are not equal");
+        }
+
+        // Use the shared secret as a symmetric encryption key
+        SecretKeySpec secretKey = new SecretKeySpec(aliceSharedSecret, "AES");
+
+        // File paths
+        String inputImagePath = "C:\\Users\\91863\\Desktop\\Porkodi\\a.jpg";
+        String encryptedImagePath = "C:\\Users\\91863\\Desktop\\PorkodiencryptedImage.jpg";
+        String decryptedImagePath = "C:\\Users\\91863\\Desktop\\Porkodi\\decryptedImage.jpg";
+
+        // Encrypt image
+        encryptImage(inputImagePath, encryptedImagePath, secretKey);
+
+        // Decrypt encrypted image
+        decryptImage(encryptedImagePath, decryptedImagePath, secretKey);
+
+        System.out.println("Encryption and decryption completed successfully.");
+    }
+
+    private static void encryptImage(String inputImagePath, String outputImagePath, SecretKeySpec secretKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding", "BC");
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey);
+
+        try (InputStream inputStream = new FileInputStream(inputImagePath);
+             OutputStream outputStream = new FileOutputStream(outputImagePath)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                byte[] encryptedBytes = cipher.update(buffer, 0, bytesRead);
+                outputStream.write(encryptedBytes);
+            }
+            byte[] encryptedBytes = cipher.doFinal();
+            outputStream.write(encryptedBytes);
+        }
+    }
+
+    private static void decryptImage(String inputImagePath, String outputImagePath, SecretKeySpec secretKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding", "BC");
+        cipher.init(Cipher.DECRYPT_MODE, secretKey);
+
+        try (InputStream inputStream = new FileInputStream(inputImagePath);
+             OutputStream outputStream = new FileOutputStream(outputImagePath)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                byte[] decryptedBytes = cipher.update(buffer, 0, bytesRead);
+                outputStream.write(decryptedBytes);
+            }
+            byte[] decryptedBytes = cipher.doFinal();
+            outputStream.write(decryptedBytes);
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The code you provided performs image encryption and decryption using the Elliptic Curve Diffie-Hellman (ECDH) key exchange protocol along with symmetric encryption (AES). Let me explain how it works:
+
+1. **Adding BouncyCastle Provider**: The code adds the BouncyCastle security provider to support cryptographic operations.
+
+2. **Key Pair Generation**: It generates key pairs for both Alice and Bob using Elliptic Curve (EC) algorithm with a key size of 256 bits.
+
+3. **Key Agreement (ECDH)**: Alice and Bob perform the ECDH key agreement. They each generate a public-private key pair and then use each other's public key to generate a shared secret. This shared secret will be used as the symmetric encryption key later on.
+
+4. **Shared Secret Generation**: Both Alice and Bob generate a shared secret. The shared secret is derived from the key agreement process.
+
+5. **Symmetric Encryption**: The shared secret generated from the ECDH key agreement is used as the symmetric encryption key (AES). The image is encrypted using AES encryption in ECB mode with PKCS5Padding.
+
+6. **Image Encryption**: The code reads the input image file (`inputImagePath`), encrypts its content using AES encryption, and writes the encrypted data to another file (`encryptedImagePath`).
+
+7. **Image Decryption**: The code reads the encrypted image file (`encryptedImagePath`), decrypts its content using AES decryption, and writes the decrypted data to another file (`decryptedImagePath`).
+
+8. **Output**: Finally, the code prints a message indicating that the encryption and decryption process completed successfully.
+
+In summary, the code demonstrates how to use the ECDH key exchange protocol to establish a shared secret between two parties (Alice and Bob), which is then used for symmetric encryption (AES) to securely encrypt and decrypt an image file. This ensures that only parties with the correct shared secret (derived from the ECDH key agreement) can decrypt the encrypted image.
