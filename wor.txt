@@ -1,0 +1,532 @@
+package ecdh;
+
+import javax.crypto.KeyAgreement;
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.*;
+import java.util.Arrays;
+import java.util.Scanner;
+
+public class ECDHDemo121 {
+    public static void main(String[] args) throws Exception {
+        Scanner scanner = new Scanner(System.in);
+
+        // Get Alice's private key parameter
+        System.out.println("Enter Alice's private key parameter (a):");
+        int a = scanner.nextInt();
+
+        // Get Bob's private key parameter
+        System.out.println("Enter Bob's private key parameter (b):");
+        int b = scanner.nextInt();
+
+        // Generate Alice's key pair
+        KeyPair aliceKeyPair = generateKeyPair(a);
+        System.out.println("Alice's Private Key: " + ((ECPrivateKey)aliceKeyPair.getPrivate()).getS());
+        System.out.println("Alice's Public Key: " + ((ECPublicKey)aliceKeyPair.getPublic()).getW());
+
+        // Generate Bob's key pair
+        KeyPair bobKeyPair = generateKeyPair(b);
+        System.out.println("Bob's Private Key: " + ((ECPrivateKey)bobKeyPair.getPrivate()).getS());
+        System.out.println("Bob's Public Key: " + ((ECPublicKey)bobKeyPair.getPublic()).getW());
+
+        // Generate ciphertext key pair for late encryption
+       KeyPair ciphertextKeyPair = lateEncryptionKey(bobKeyPair.getPrivate(), aliceKeyPair.getPublic());
+
+
+        // Perform key agreement to derive shared secret
+        KeyAgreement aliceKeyAgreement = KeyAgreement.getInstance("ECDH");
+        aliceKeyAgreement.init(aliceKeyPair.getPrivate());
+        aliceKeyAgreement.doPhase(ciphertextKeyPair.getPublic(), true);
+        byte[] sharedSecretAlice = aliceKeyAgreement.generateSecret();
+        System.out.println("Alice's Shared Secret: " + Arrays.toString(sharedSecretAlice));
+
+        KeyAgreement bobKeyAgreement = KeyAgreement.getInstance("ECDH");
+        bobKeyAgreement.init(bobKeyPair.getPrivate());
+        bobKeyAgreement.doPhase(aliceKeyPair.getPublic(), true);
+        byte[] sharedSecretBob = bobKeyAgreement.generateSecret();
+        System.out.println("Bob's Shared Secret: " + Arrays.toString(sharedSecretBob));
+
+        // Ensure Alice and Bob derived the same shared secret
+        if (!Arrays.equals(sharedSecretAlice, sharedSecretBob)) {
+            throw new Exception("Shared secrets do not match");
+        }
+
+        // Now you can use the shared secret for encryption/decryption
+
+        // Encrypt and decrypt an image (for demonstration purposes)
+        encryptImage("C:\\Users\\91863\\Desktop\\data\\a.jpg", sharedSecretAlice);
+        decryptImage("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg", sharedSecretAlice, "C:\\Users\\91863\\Desktop\\data\\decrypted_image.jpg");
+
+        scanner.close();
+    }
+
+    private static KeyPair generateKeyPair(int privateKeyParameter) throws Exception {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
+        keyPairGenerator.initialize(ecSpec, new SecureRandom(new byte[]{(byte) privateKeyParameter}));
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    private static void encryptImage(String imagePath, byte[] sharedSecret) throws Exception {
+        // Read the image file
+        byte[] imageData = Files.readAllBytes(Paths.get(imagePath));
+
+        // Encrypt the image data using bitwise XOR with the shared secret
+        for (int i = 0; i < imageData.length; i++) {
+            imageData[i] ^= sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write encrypted image to file
+        FileOutputStream fos = new FileOutputStream("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg");
+        fos.write(imageData);
+        fos.close();
+    }
+
+    private static void decryptImage(String encryptedImagePath, byte[] sharedSecret, String outputImagePath) throws Exception {
+        // Read the encrypted image file
+        byte[] encryptedImageData = Files.readAllBytes(Paths.get(encryptedImagePath));
+
+        // Decrypt the encrypted image data using bitwise XOR with the shared secret
+        for (int i = 0; i < encryptedImageData.length; i++) {
+            encryptedImageData[i] ^= sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write decrypted image to file
+        FileOutputStream fos = new FileOutputStream(outputImagePath);
+        fos.write(encryptedImageData);
+        fos.close();
+    }
+
+    private static KeyPair lateEncryptionKey(PrivateKey privateKey, PublicKey publicKey ) throws Exception {
+        // Generate a random private key for ciphertext
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+    keyPairGenerator.initialize(256); // Adjust the key size as needed
+    KeyPair ciphertextKeyPair = keyPairGenerator.generateKeyPair();
+
+    // Calculate the ECDH shared secret: sharedECCKey = pubKey * ciphertextPrivKey
+    KeyAgreement keyAgreement = KeyAgreement.getInstance("ECDH");
+    keyAgreement.init(ciphertextKeyPair.getPrivate());
+    keyAgreement.doPhase(publicKey, true);
+    byte[] sharedSecret = keyAgreement.generateSecret();
+
+    return new KeyPair(publicKey, ciphertextKeyPair.getPrivate());
+
+    }
+
+    private static ECPoint pointMultiply(ECPoint point, BigInteger scalar, EllipticCurve curve) {
+        ECPoint result = ECPoint.POINT_INFINITY;
+        byte[] scalarBytes = scalar.toByteArray();
+        for (int i = 0; i < scalar.bitLength(); ++i) {
+            if (scalar.testBit(i)) {
+                result = pointAdd(result, point, curve);
+            }
+            point = pointAdd(point, point, curve);
+        }
+        return result;
+    }
+
+    private static BigInteger getCharacteristic(EllipticCurve curve) {
+        // For standardized curves like secp256r1, you can hardcode the characteristic
+        if (curve.getField() instanceof ECFieldFp) {
+            return ((ECFieldFp) curve.getField()).getP();
+        } else {
+            throw new IllegalArgumentException("Unsupported field type");
+        }
+    }
+
+    private static ECPoint pointAdd(ECPoint p1, ECPoint p2, EllipticCurve curve) {
+        BigInteger p = getCharacteristic(curve); // Use getCharacteristic method to get the characteristic
+        BigInteger a = curve.getA();
+        BigInteger x1 = p1.getAffineX();
+        BigInteger y1 = p1.getAffineY();
+        BigInteger x2 = p2.getAffineX();
+        BigInteger y2 = p2.getAffineY();
+
+        // Handle point at infinity cases
+        if (p1.equals(ECPoint.POINT_INFINITY)) {
+            return p2;
+        }
+        if (p2.equals(ECPoint.POINT_INFINITY)) {
+            return p1;
+        }
+
+        // Calculate slope of the line
+        BigInteger slope;
+        if (p1.equals(p2)) {
+            BigInteger numerator = (x1.pow(2)).multiply(BigInteger.valueOf(3)).add(a);
+            BigInteger denominator = (y1.multiply(BigInteger.valueOf(2))).modInverse(p);
+            slope = numerator.multiply(denominator).mod(p);
+        } else {
+            BigInteger numerator = y2.subtract(y1);
+            BigInteger denominator = x2.subtract(x1).modInverse(p);
+            slope = numerator.multiply(denominator).mod(p);
+        }
+
+        // Calculate the new point
+        BigInteger x3 = (slope.pow(2)).subtract(x1).subtract(x2).mod(p);
+        BigInteger y3 = (slope.multiply(x1.subtract(x3))).subtract(y1).mod(p);
+
+        return new ECPoint(x3, y3);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+--------------\----------------------------------------------------------
+The shared secret being the same for both Alice and Bob, regardless of whether they have the same private key or not, is consistent with the properties of Elliptic Curve Diffie-Hellman (ECDH) key agreement. Here's why:
+
+1. **Case 1: Alice and Bob have the same private key (a = b)**:
+   - When both Alice and Bob use the same private key, their public keys will also be the same because the public key is calculated as \( a \times G \), where \( a \) is the private key and \( G \) is the base point on the elliptic curve.
+   - As a result, when they perform key agreement using each other's public keys, they essentially end up with the same shared secret.
+   - This is why you see the shared secret being the same when Alice and Bob both have the same private key.
+
+2. **Case 2: Alice and Bob have different private keys (a ≠ b)**:
+   - Even when Alice and Bob have different private keys, they end up with the same shared secret.
+   - This is because the properties of elliptic curve cryptography ensure that \( (a \times G) \times b \) and \( (b \times G) \times a \) yield the same result, as expressed by the commutative property of multiplication.
+   - Consequently, even when their private keys are different, their shared secret remains the same.
+   
+In both cases, the shared secret being the same demonstrates the effectiveness and security of the ECDH key agreement protocol. It ensures that Alice and Bob can establish a secure shared secret without needing to exchange their private keys.
+
+
+
+---------------------------------
+
+
+package ecdh;
+
+import javax.crypto.KeyAgreement;
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.*;
+import java.util.Arrays;
+import java.util.Scanner;
+
+public class ECDHDemo121 {
+    public static void main(String[] args) throws Exception {
+        Scanner scanner = new Scanner(System.in);
+
+        // Get Alice's private key parameter
+        System.out.println("Enter Alice's private key parameter (a):");
+        int a = scanner.nextInt();
+
+        // Get Bob's private key parameter
+        System.out.println("Enter Bob's private key parameter (b):");
+        int b = scanner.nextInt();
+
+        // Generate Alice's key pair
+        KeyPair aliceKeyPair = generateKeyPair(a);
+        System.out.println("Alice's Private Key: " + ((ECPrivateKey)aliceKeyPair.getPrivate()).getS());
+        System.out.println("Alice's Public Key: " + ((ECPublicKey)aliceKeyPair.getPublic()).getW());
+
+        // Generate Bob's key pair
+        KeyPair bobKeyPair = generateKeyPair(b);
+        System.out.println("Bob's Private Key: " + ((ECPrivateKey)bobKeyPair.getPrivate()).getS());
+        System.out.println("Bob's Public Key: " + ((ECPublicKey)bobKeyPair.getPublic()).getW());
+
+        // Generate ciphertext key pair for late encryption
+       KeyPair ciphertextKeyPair = lateEncryptionKey(aliceKeyPair.getPrivate(), bobKeyPair.getPublic());
+// Perform key agreement to derive shared secret for Alice
+KeyAgreement aliceKeyAgreement = KeyAgreement.getInstance("ECDH");
+aliceKeyAgreement.init(aliceKeyPair.getPrivate()); // Initializing Alice's KeyAgreement with her private key (a)
+aliceKeyAgreement.doPhase(ciphertextKeyPair.getPublic(), true); // Alice computes (a * G) * b
+byte[] sharedSecretAlice = aliceKeyAgreement.generateSecret(); // Alice computes the shared secret (sharedECCKey)
+System.out.println("Alice's Shared Secret: " + Arrays.toString(sharedSecretAlice));
+
+// Perform key agreement to derive shared secret for Bob
+KeyAgreement bobKeyAgreement = KeyAgreement.getInstance("ECDH");
+bobKeyAgreement.init(bobKeyPair.getPrivate()); // Initializing Bob's KeyAgreement with his private key (b)
+bobKeyAgreement.doPhase(aliceKeyPair.getPublic(), true); // Bob computes (b * G) * a
+byte[] sharedSecretBob = bobKeyAgreement.generateSecret(); // Bob computes the shared secret (sharedECCKey)
+System.out.println("Bob's Shared Secret: " + Arrays.toString(sharedSecretBob));
+
+// Ensure Alice and Bob derived the same shared secret
+if (!Arrays.equals(sharedSecretAlice, sharedSecretBob)) {
+    throw new Exception("Shared secrets do not match");
+}
+
+
+        // Now you can use the shared secret for encryption/decryption
+
+        // Encrypt and decrypt an image (for demonstration purposes)
+        encryptImage("C:\\Users\\91863\\Desktop\\data\\a.jpg", sharedSecretAlice);
+        decryptImage("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg", sharedSecretBob, "C:\\Users\\91863\\Desktop\\data\\decrypted_image.jpg");
+
+        scanner.close();
+    }
+
+    private static KeyPair generateKeyPair(int privateKeyParameter) throws Exception {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
+        keyPairGenerator.initialize(ecSpec, new SecureRandom(new byte[]{(byte) privateKeyParameter}));
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    private static void encryptImage(String imagePath, byte[] sharedSecret) throws Exception {
+        // Read the image file
+        byte[] imageData = Files.readAllBytes(Paths.get(imagePath));
+
+        // Encrypt the image data using bitwise XOR with the shared secret
+        for (int i = 0; i < imageData.length; i++) {
+            imageData[i] ^= sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write encrypted image to file
+        FileOutputStream fos = new FileOutputStream("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg");
+        fos.write(imageData);
+        fos.close();
+    }
+
+    private static void decryptImage(String encryptedImagePath, byte[] sharedSecret, String outputImagePath) throws Exception {
+        // Read the encrypted image file
+        byte[] encryptedImageData = Files.readAllBytes(Paths.get(encryptedImagePath));
+
+        // Decrypt the encrypted image data using bitwise XOR with the shared secret
+        for (int i = 0; i < encryptedImageData.length; i++) {
+            encryptedImageData[i] ^= sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write decrypted image to file
+        FileOutputStream fos = new FileOutputStream(outputImagePath);
+        fos.write(encryptedImageData);
+        fos.close();
+    }
+
+    private static KeyPair lateEncryptionKey(PrivateKey privateKey, PublicKey publicKey ) throws Exception {
+        // Generate a random private key for ciphertext
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+    keyPairGenerator.initialize(256); // Adjust the key size as needed
+    KeyPair ciphertextKeyPair = keyPairGenerator.generateKeyPair();
+
+    // Calculate the ECDH shared secret: sharedECCKey = pubKey * ciphertextPrivKey
+    KeyAgreement keyAgreement = KeyAgreement.getInstance("ECDH");
+    keyAgreement.init(ciphertextKeyPair.getPrivate());
+    keyAgreement.doPhase(publicKey, true);
+    byte[] sharedSecret = keyAgreement.generateSecret();
+
+    return new KeyPair(publicKey, ciphertextKeyPair.getPrivate());
+
+    }
+
+    private static ECPoint pointMultiply(ECPoint point, BigInteger scalar, EllipticCurve curve) {
+        ECPoint result = ECPoint.POINT_INFINITY;
+        byte[] scalarBytes = scalar.toByteArray();
+        for (int i = 0; i < scalar.bitLength(); ++i) {
+            if (scalar.testBit(i)) {
+                result = pointAdd(result, point, curve);
+            }
+            point = pointAdd(point, point, curve);
+        }
+        return result;
+    }
+
+    private static BigInteger getCharacteristic(EllipticCurve curve) {
+        // For standardized curves like secp256r1, you can hardcode the characteristic
+        if (curve.getField() instanceof ECFieldFp) {
+            return ((ECFieldFp) curve.getField()).getP();
+        } else {
+            throw new IllegalArgumentException("Unsupported field type");
+        }
+    }
+
+    private static ECPoint pointAdd(ECPoint p1, ECPoint p2, EllipticCurve curve) {
+        BigInteger p = getCharacteristic(curve); // Use getCharacteristic method to get the characteristic
+        BigInteger a = curve.getA();
+        BigInteger x1 = p1.getAffineX();
+        BigInteger y1 = p1.getAffineY();
+        BigInteger x2 = p2.getAffineX();
+        BigInteger y2 = p2.getAffineY();
+
+        // Handle point at infinity cases
+        if (p1.equals(ECPoint.POINT_INFINITY)) {
+            return p2;
+        }
+        if (p2.equals(ECPoint.POINT_INFINITY)) {
+            return p1;
+        }
+
+        // Calculate slope of the line
+        BigInteger slope;
+        if (p1.equals(p2)) {
+            BigInteger numerator = (x1.pow(2)).multiply(BigInteger.valueOf(3)).add(a);
+            BigInteger denominator = (y1.multiply(BigInteger.valueOf(2))).modInverse(p);
+            slope = numerator.multiply(denominator).mod(p);
+        } else {
+            BigInteger numerator = y2.subtract(y1);
+            BigInteger denominator = x2.subtract(x1).modInverse(p);
+            slope = numerator.multiply(denominator).mod(p);
+        }
+
+        // Calculate the new point
+        BigInteger x3 = (slope.pow(2)).subtract(x1).subtract(x2).mod(p);
+        BigInteger y3 = (slope.multiply(x1.subtract(x3))).subtract(y1).mod(p);
+
+        return new ECPoint(x3, y3);
+    }
+}
+------------------------
+package ecdh;
+
+import javax.crypto.KeyAgreement;
+import java.io.*;
+import java.math.BigInteger;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.ECPublicKey;
+import java.security.spec.*;
+import java.util.Arrays;
+import java.util.Scanner;
+
+public class ECDHDemo121 {
+    public static void main(String[] args) throws Exception {
+        Scanner scanner = new Scanner(System.in);
+
+        // Get Alice's private key parameter
+        System.out.println("Enter Alice's private key parameter (a):");
+        int a = scanner.nextInt();
+
+        // Get Bob's private key parameter
+        System.out.println("Enter Bob's private key parameter (b):");
+        int b = scanner.nextInt();
+
+        // Generate Alice's key pair
+        KeyPair aliceKeyPair = generateKeyPair(a);
+        System.out.println("Alice's Private Key: " + ((ECPrivateKey)aliceKeyPair.getPrivate()).getS());
+        System.out.println("Alice's Public Key: " + ((ECPublicKey)aliceKeyPair.getPublic()).getW());
+
+        // Generate Bob's key pair
+        KeyPair bobKeyPair = generateKeyPair(b);
+        System.out.println("Bob's Private Key: " + ((ECPrivateKey)bobKeyPair.getPrivate()).getS());
+        System.out.println("Bob's Public Key: " + ((ECPublicKey)bobKeyPair.getPublic()).getW());
+
+        // Generate ciphertext key pair for late encryption
+       KeyPair ciphertextKeyPair = lateEncryptionKey(aliceKeyPair.getPrivate(), bobKeyPair.getPublic());
+// Perform key agreement to derive shared secret for Alice
+KeyAgreement aliceKeyAgreement = KeyAgreement.getInstance("ECDH");
+aliceKeyAgreement.init(aliceKeyPair.getPrivate()); // Initializing Alice's KeyAgreement with her private key (a)
+aliceKeyAgreement.doPhase(ciphertextKeyPair.getPublic(), true); // Alice computes (a * G) * b
+byte[] sharedSecretAlice = aliceKeyAgreement.generateSecret(); // Alice computes the shared secret (sharedECCKey)
+System.out.println("Alice's Shared Secret: " + Arrays.toString(sharedSecretAlice));
+
+// Perform key agreement to derive shared secret for Bob
+KeyAgreement bobKeyAgreement = KeyAgreement.getInstance("ECDH");
+bobKeyAgreement.init(bobKeyPair.getPrivate()); // Initializing Bob's KeyAgreement with his private key (b)
+bobKeyAgreement.doPhase(aliceKeyPair.getPublic(), true); // Bob computes (b * G) * a
+byte[] sharedSecretBob = bobKeyAgreement.generateSecret(); // Bob computes the shared secret (sharedECCKey)
+System.out.println("Bob's Shared Secret: " + Arrays.toString(sharedSecretBob));
+
+// Ensure Alice and Bob derived the same shared secret
+if (!Arrays.equals(sharedSecretAlice, sharedSecretBob)) {
+    throw new Exception("Shared secrets do not match");
+}
+
+
+        // Now you can use the shared secret for encryption/decryption
+
+        // Encrypt and decrypt an image (for demonstration purposes)
+        encryptImage("C:\\Users\\91863\\Desktop\\data\\a.jpg", sharedSecretAlice);
+        decryptImage("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg", sharedSecretBob, "C:\\Users\\91863\\Desktop\\data\\decrypted_image.jpg");
+
+        scanner.close();
+    }
+
+    private static KeyPair generateKeyPair(int privateKeyParameter) throws Exception {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
+        keyPairGenerator.initialize(ecSpec, new SecureRandom(new byte[]{(byte) privateKeyParameter}));
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    private static void encryptImage(String imagePath, byte[] sharedSecret) throws Exception {
+        // Read the image file
+        byte[] imageData = Files.readAllBytes(Paths.get(imagePath));
+
+        // Encrypt the image data using bitwise XOR with the shared secret
+        for (int i = 0; i < imageData.length; i++) {
+            imageData[i] ^= sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write encrypted image to file
+        FileOutputStream fos = new FileOutputStream("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg");
+        fos.write(imageData);
+        fos.close();
+    }
+
+    private static void decryptImage(String encryptedImagePath, byte[] sharedSecret, String outputImagePath) throws Exception {
+        // Read the encrypted image file
+        byte[] encryptedImageData = Files.readAllBytes(Paths.get(encryptedImagePath));
+
+        // Decrypt the encrypted image data using bitwise XOR with the shared secret
+        for (int i = 0; i < encryptedImageData.length; i++) {
+            encryptedImageData[i] ^= sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write decrypted image to file
+        FileOutputStream fos = new FileOutputStream(outputImagePath);
+        fos.write(encryptedImageData);
+        fos.close();
+    }
+
+    private static KeyPair lateEncryptionKey(PrivateKey privateKey, PublicKey publicKey ) throws Exception {
+        // Generate a random private key for ciphertext
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+    keyPairGenerator.initialize(256); // Adjust the key size as needed
+    KeyPair ciphertextKeyPair = keyPairGenerator.generateKeyPair();
+
+    // Calculate the ECDH shared secret: sharedECCKey = pubKey * ciphertextPrivKey
+    KeyAgreement keyAgreement = KeyAgreement.getInstance("ECDH");
+    keyAgreement.init(ciphertextKeyPair.getPrivate());
+    keyAgreement.doPhase(publicKey, true);
+    byte[] sharedSecret = keyAgreement.generateSecret();
+
+    return new KeyPair(publicKey, ciphertextKeyPair.getPrivate());
+
+    }
+}
+
+-----------------
+
+
+Let's break down how the code works:
+
+1. **Key Pair Generation**: 
+   - Alice and Bob's key pairs are generated using the `generateKeyPair` method. Each key pair consists of a private key and a corresponding public key.
+
+2. **Late Encryption Key Generation**:
+   - The `lateEncryptionKey` method is used to generate a ciphertext key pair for late encryption. This key pair is created using a random private key for encryption and the other party's public key. This ensures that the shared secret derived from this key pair can be used by the other party for decryption.
+   - Inside this method, a new key pair generator is initialized with the EC (Elliptic Curve) algorithm, and a random private key is generated. Then, a key agreement is performed using this private key and the provided public key to calculate the shared secret. Finally, the ciphertext key pair is returned.
+
+3. **Key Agreement for Alice and Bob**:
+   - Both Alice and Bob perform key agreement using their own private keys and the other party's public key. This is done using the `KeyAgreement` class with the ECDH algorithm.
+   - For Alice, the shared secret is calculated using her private key and Bob's public key.
+   - For Bob, the shared secret is calculated using his private key and Alice's public key.
+   - After key agreement, the shared secrets for both Alice and Bob are printed and compared to ensure they match.
+
+4. **Encryption and Decryption**:
+   - The generated shared secret is then used for encryption and decryption.
+   - An image file is read and encrypted using bitwise XOR with the shared secret. The resulting encrypted image is then saved to a file.
+   - Later, the encrypted image file is read again, and decryption is performed using the shared secret. The decrypted image is saved to another file.
+
+5. **Usage**:
+   - Upon running the program, users are prompted to input parameters for Alice's and Bob's private keys.
+   - The program generates key pairs, performs key agreement, ensures the derived shared secrets match, and then proceeds with encryption and decryption of an image file.
+
+This workflow ensures that Alice and Bob can securely exchange messages or data using Elliptic Curve Diffie-Hellman key agreement and encryption techniques.

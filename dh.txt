@@ -1,0 +1,165 @@
+
+https://codeahoy.com/learn/practicalcryptography/asymmetric-key-ciphers/ecc-encryption-decryption/
+
+
+xor
+
+import javax.crypto.KeyAgreement;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.spec.ECGenParameterSpec;
+import java.util.Arrays;
+
+public class ECDHDemo {
+    public static void main(String[] args) throws Exception {
+        // Generate Alice's key pair
+        KeyPair aliceKeyPair = generateKeyPair();
+
+        // Generate Bob's key pair
+        KeyPair bobKeyPair = generateKeyPair();
+
+        // Perform key agreement to derive shared secret
+        KeyAgreement aliceKeyAgreement = KeyAgreement.getInstance("ECDH");
+        aliceKeyAgreement.init(aliceKeyPair.getPrivate());
+        aliceKeyAgreement.doPhase(bobKeyPair.getPublic(), true);
+        byte[] sharedSecret = aliceKeyAgreement.generateSecret();
+
+        KeyAgreement bobKeyAgreement = KeyAgreement.getInstance("ECDH");
+        bobKeyAgreement.init(bobKeyPair.getPrivate());
+        bobKeyAgreement.doPhase(aliceKeyPair.getPublic(), true);
+        // Ensure Bob derived the same shared secret as Alice
+        if (!Arrays.equals(sharedSecret, bobKeyAgreement.generateSecret())) {
+            throw new Exception("Shared secrets do not match");
+        }
+
+        // Now you can use the shared secret for encryption/decryption
+
+        // Encrypt and decrypt an image (for demonstration purposes)
+        byte[] encryptedImage = encryptImage("C:\\Users\\91863\\Desktop\\data\\a.jpg", sharedSecret);
+        decryptImage(encryptedImage, sharedSecret, "C:\\Users\\91863\\Desktop\\data\\decrypted_image.jpg");
+    }
+
+    private static KeyPair generateKeyPair() throws Exception {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
+        keyPairGenerator.initialize(ecSpec, new SecureRandom());
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    private static byte[] encryptImage(String imagePath, byte[] sharedSecret) throws Exception {
+        // Read the image file
+        byte[] imageData = Files.readAllBytes(Paths.get(imagePath));
+
+        // XOR encrypt the image data with the shared secret
+        byte[] encryptedImage = new byte[imageData.length];
+        for (int i = 0; i < imageData.length; i++) {
+            encryptedImage[i] = (byte) (imageData[i] ^ sharedSecret[i % sharedSecret.length]);
+        }
+
+        // Write encrypted image to file
+        FileOutputStream fos = new FileOutputStream("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg");
+        fos.write(encryptedImage);
+        fos.close();
+
+        return encryptedImage;
+    }
+
+    private static void decryptImage(byte[] encryptedImage, byte[] sharedSecret, String outputImagePath) throws Exception {
+        // XOR decrypt the encrypted image data with the shared secret
+        byte[] decryptedImage = new byte[encryptedImage.length];
+        for (int i = 0; i < encryptedImage.length; i++) {
+            decryptedImage[i] = (byte) (encryptedImage[i] ^ sharedSecret[i % sharedSecret.length]);
+        }
+
+        // Write decrypted image to file
+        FileOutputStream fos = new FileOutputStream(outputImagePath);
+        fos.write(decryptedImage);
+        fos.close();
+    }
+}
+
+
+
+
+-----------------------------------
+
+
+package ecdh;
+
+import javax.crypto.KeyAgreement;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.spec.ECGenParameterSpec;
+import java.util.Arrays;
+
+public class ECDHDemo {
+    public static void main(String[] args) throws Exception {
+        // Generate Alice's key pair
+        KeyPair aliceKeyPair = generateKeyPair();
+
+        // Generate Bob's key pair
+        KeyPair bobKeyPair = generateKeyPair();
+
+        // Perform key agreement to derive shared secret
+        KeyAgreement aliceKeyAgreement = KeyAgreement.getInstance("ECDH");
+        aliceKeyAgreement.init(aliceKeyPair.getPrivate());
+        aliceKeyAgreement.doPhase(bobKeyPair.getPublic(), true);
+        byte[] sharedSecret = aliceKeyAgreement.generateSecret();
+
+        KeyAgreement bobKeyAgreement = KeyAgreement.getInstance("ECDH");
+        bobKeyAgreement.init(bobKeyPair.getPrivate());
+        bobKeyAgreement.doPhase(aliceKeyPair.getPublic(), true);
+        // Ensure Bob derived the same shared secret as Alice
+        if (!Arrays.equals(sharedSecret, bobKeyAgreement.generateSecret())) {
+            throw new Exception("Shared secrets do not match");
+        }
+
+        // Now you can use the shared secret for encryption/decryption
+
+        // Encrypt and decrypt an image (for demonstration purposes)
+        encryptImage("C:\\Users\\91863\\Desktop\\data\\a.jpg", sharedSecret);
+        decryptImage("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg", sharedSecret, "C:\\Users\\91863\\Desktop\\data\\decrypted_image.jpg");
+    }
+
+    private static KeyPair generateKeyPair() throws Exception {
+        KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("EC");
+        ECGenParameterSpec ecSpec = new ECGenParameterSpec("secp256r1");
+        keyPairGenerator.initialize(ecSpec, new SecureRandom());
+        return keyPairGenerator.generateKeyPair();
+    }
+
+    private static void encryptImage(String imagePath, byte[] sharedSecret) throws Exception {
+        // Read the image file
+        byte[] imageData = Files.readAllBytes(Paths.get(imagePath));
+
+        // Modify the image data using the shared secret
+        for (int i = 0; i < imageData.length; i++) {
+            imageData[i] += sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write encrypted image to file
+        FileOutputStream fos = new FileOutputStream("C:\\Users\\91863\\Desktop\\data\\encrypted_image.jpg");
+        fos.write(imageData);
+        fos.close();
+    }
+
+    private static void decryptImage(String encryptedImagePath, byte[] sharedSecret, String outputImagePath) throws Exception {
+        // Read the encrypted image file
+        byte[] encryptedImageData = Files.readAllBytes(Paths.get(encryptedImagePath));
+
+        // Modify the encrypted image data to decrypt it
+        for (int i = 0; i < encryptedImageData.length; i++) {
+            encryptedImageData[i] -= sharedSecret[i % sharedSecret.length];
+        }
+
+        // Write decrypted image to file
+        FileOutputStream fos = new FileOutputStream(outputImagePath);
+        fos.write(encryptedImageData);
+        fos.close();
+    }
+}
