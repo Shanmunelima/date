@@ -1,0 +1,220 @@
+package ecdh;
+
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.jce.interfaces.ECPrivateKey;
+import org.bouncycastle.jce.interfaces.ECPublicKey;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import javax.crypto.KeyAgreement;
+import java.security.*;
+import java.math.BigInteger;
+import org.bouncycastle.math.ec.ECCurve;
+
+public class ECDHDemo21 {
+    public static void main(String[] args) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+
+        // Set curve parameters for Alice
+        BigInteger alice_p = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853951");
+        BigInteger alice_a = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853948");
+        BigInteger alice_b = new BigInteger("41058363725152142129326129780047268409114441015993725554835256314039467401291");
+        BigInteger alice_n = new BigInteger("115792089210356248762697446949407573529996955224135760342422259061068512044369");
+        BigInteger alice_gx = new BigInteger("48439561293906451759052585252797914202762949526041747995844080717082404635286");
+        BigInteger alice_gy = new BigInteger("36134250956749795798585127919587881956611106672985015071877198253568414405109");
+
+        // Set curve parameters for Bob
+        BigInteger bob_p = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853951");
+        BigInteger bob_a = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853948");
+        BigInteger bob_b = new BigInteger("41058363725152142129326129780047268409114441015993725554835256314039467401291");
+        BigInteger bob_n = new BigInteger("115792089210356248762697446949407573529996955224135760342422259061068512044369");
+        BigInteger bob_gx = new BigInteger("48439561293906451759052585252797914202762949526041747995844080717082404635286");
+        BigInteger bob_gy = new BigInteger("36134250956749795798585127919587881956611106672985015071877198253568414405109");
+
+        // Create custom curve parameter specification for Alice
+        ECCurve alice_curve = new ECCurve.Fp(alice_p, alice_a, alice_b);
+        org.bouncycastle.math.ec.ECPoint alice_generator = alice_curve.createPoint(alice_gx, alice_gy);
+        BigInteger alice_cofactor = BigInteger.ONE; // Change cofactor here
+        ECNamedCurveParameterSpec alice_customSpec = new ECNamedCurveParameterSpec(
+                "alice_custom", // Curve name
+                alice_curve, // Curve
+                alice_generator, // Base point (generator)
+                alice_n, // Order of the base point
+                alice_cofactor // Co-factor
+        );
+
+        // Create custom curve parameter specification for Bob
+        ECCurve bob_curve = new ECCurve.Fp(bob_p, bob_a, bob_b);
+        org.bouncycastle.math.ec.ECPoint bob_generator = bob_curve.createPoint(bob_gx, bob_gy);
+        BigInteger bob_cofactor = BigInteger.ONE; // Change cofactor here
+        ECNamedCurveParameterSpec bob_customSpec = new ECNamedCurveParameterSpec(
+                "bob_custom", // Curve name
+                bob_curve, // Curve
+                bob_generator, // Base point (generator)
+                bob_n, // Order of the base point
+                bob_cofactor // Co-factor
+        );
+
+        // Generate Alice's key pair
+        KeyPairGenerator alice_keyGen = KeyPairGenerator.getInstance("ECDH", "BC");
+        alice_keyGen.initialize(alice_customSpec, new SecureRandom());
+        KeyPair aliceKeyPair = alice_keyGen.generateKeyPair();
+
+        // Generate Bob's key pair
+        KeyPairGenerator bob_keyGen = KeyPairGenerator.getInstance("ECDH", "BC");
+        bob_keyGen.initialize(bob_customSpec, new SecureRandom());
+        KeyPair bobKeyPair = bob_keyGen.generateKeyPair();
+
+        // Alice's private key and Bob's public key
+        ECPrivateKey alicePrivateKey = (ECPrivateKey) aliceKeyPair.getPrivate();
+        ECPublicKey bobPublicKey = (ECPublicKey) bobKeyPair.getPublic();
+
+        // Bob's private key and Alice's public key
+        ECPrivateKey bobPrivateKey = (ECPrivateKey) bobKeyPair.getPrivate();
+        ECPublicKey alicePublicKey = (ECPublicKey) aliceKeyPair.getPublic();
+
+        // Print Alice's public and private keys
+        System.out.println("Alice's Public Key: " + alicePublicKey);
+        System.out.println("Alice's Private Key: " + alicePrivateKey);
+
+    package ecdh;
+
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
+import org.bouncycastle.jce.interfaces.ECPrivateKey;
+import org.bouncycastle.jce.interfaces.ECPublicKey;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import javax.crypto.KeyAgreement;
+import java.security.*;
+import java.math.BigInteger;
+import org.bouncycastle.math.ec.ECCurve;
+
+public class ECDHDemo21 {
+    public static void main(String[] args) throws Exception {
+        Security.addProvider(new BouncyCastleProvider());
+
+        // Set curve parameters for Alice
+        BigInteger alice_p = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853951");
+        BigInteger alice_a = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853948");
+        BigInteger alice_b = new BigInteger("41058363725152142129326129780047268409114441015993725554835256314039467401291");
+        BigInteger alice_n = new BigInteger("115792089210356248762697446949407573529996955224135760342422259061068512044369");
+        BigInteger alice_gx = new BigInteger("48439561293906451759052585252797914202762949526041747995844080717082404635286");
+        BigInteger alice_gy = new BigInteger("36134250956749795798585127919587881956611106672985015071877198253568414405109");
+
+        // Set curve parameters for Bob
+        BigInteger bob_p = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853951");
+        BigInteger bob_a = new BigInteger("115792089210356248762697446949407573530086143415290314195533631308867097853948");
+        BigInteger bob_b = new BigInteger("41058363725152142129326129780047268409114441015993725554835256314039467401291");
+        BigInteger bob_n = new BigInteger("115792089210356248762697446949407573529996955224135760342422259061068512044369");
+        BigInteger bob_gx = new BigInteger("48439561293906451759052585252797914202762949526041747995844080717082404635286");
+        BigInteger bob_gy = new BigInteger("36134250956749795798585127919587881956611106672985015071877198253568414405109");
+
+        // Create custom curve parameter specification for Alice
+        ECCurve alice_curve = new ECCurve.Fp(alice_p, alice_a, alice_b);
+        org.bouncycastle.math.ec.ECPoint alice_generator = alice_curve.createPoint(alice_gx, alice_gy);
+        BigInteger alice_cofactor = BigInteger.ONE; // Change cofactor here
+        ECNamedCurveParameterSpec alice_customSpec = new ECNamedCurveParameterSpec(
+                "alice_custom", // Curve name
+                alice_curve, // Curve
+                alice_generator, // Base point (generator)
+                alice_n, // Order of the base point
+                alice_cofactor // Co-factor
+        );
+
+        // Create custom curve parameter specification for Bob
+        ECCurve bob_curve = new ECCurve.Fp(bob_p, bob_a, bob_b);
+        org.bouncycastle.math.ec.ECPoint bob_generator = bob_curve.createPoint(bob_gx, bob_gy);
+        BigInteger bob_cofactor = BigInteger.ONE; // Change cofactor here
+        ECNamedCurveParameterSpec bob_customSpec = new ECNamedCurveParameterSpec(
+                "bob_custom", // Curve name
+                bob_curve, // Curve
+                bob_generator, // Base point (generator)
+                bob_n, // Order of the base point
+                bob_cofactor // Co-factor
+        );
+
+        // Generate Alice's key pair
+        KeyPairGenerator alice_keyGen = KeyPairGenerator.getInstance("ECDH", "BC");
+        alice_keyGen.initialize(alice_customSpec, new SecureRandom());
+        KeyPair aliceKeyPair = alice_keyGen.generateKeyPair();
+
+        // Generate Bob's key pair
+        KeyPairGenerator bob_keyGen = KeyPairGenerator.getInstance("ECDH", "BC");
+        bob_keyGen.initialize(bob_customSpec, new SecureRandom());
+        KeyPair bobKeyPair = bob_keyGen.generateKeyPair();
+
+        // Alice's private key and Bob's public key
+        ECPrivateKey alicePrivateKey = (ECPrivateKey) aliceKeyPair.getPrivate();
+        ECPublicKey bobPublicKey = (ECPublicKey) bobKeyPair.getPublic();
+
+        // Bob's private key and Alice's public key
+        ECPrivateKey bobPrivateKey = (ECPrivateKey) bobKeyPair.getPrivate();
+        ECPublicKey alicePublicKey = (ECPublicKey) aliceKeyPair.getPublic();
+
+        // Print Alice's public and private keys
+        System.out.println("Alice's Public Key: " + alicePublicKey);
+        System.out.println("Alice's Private Key: " + alicePrivateKey);
+
+        // Print Bob's public and private keys
+        System.out.println("Bob's Public Key: " + bobPublicKey);
+        System.out.println("Bob's Private Key: " + bobPrivateKey);
+
+        // Key agreement
+        KeyAgreement aliceKeyAgreement = KeyAgreement.getInstance("ECDH");
+        aliceKeyAgreement.init(alicePrivateKey);
+        aliceKeyAgreement.doPhase(bobPublicKey, true);
+        byte[] aliceSharedSecret = aliceKeyAgreement.generateSecret();
+
+        KeyAgreement bobKeyAgreement = KeyAgreement.getInstance("ECDH");
+        bobKeyAgreement.init(bobPrivateKey);
+        bobKeyAgreement.doPhase(alicePublicKey, true);
+        byte[] bobSharedSecret = bobKeyAgreement.generateSecret();
+
+        // Check if the shared secrets are the same
+        if (MessageDigest.isEqual(aliceSharedSecret, bobSharedSecret)) {
+            System.out.println("Shared secrets match!");
+            System.out.println("Shared Secret (Hexadecimal): " + bytesToHex(aliceSharedSecret));
+        } else {
+            System.out.println("Shared secrets do not match!");
+        }
+    }
+
+    // Utility method to convert bytes to hexadecimal string
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02X", b));
+        }
+        return result.toString();
+    }
+}
+    // Print Bob's public and private keys
+        System.out.println("Bob's Public Key: " + bobPublicKey);
+        System.out.println("Bob's Private Key: " + bobPrivateKey);
+
+        // Key agreement
+        KeyAgreement aliceKeyAgreement = KeyAgreement.getInstance("ECDH");
+        aliceKeyAgreement.init(alicePrivateKey);
+        aliceKeyAgreement.doPhase(bobPublicKey, true);
+        byte[] aliceSharedSecret = aliceKeyAgreement.generateSecret();
+
+        KeyAgreement bobKeyAgreement = KeyAgreement.getInstance("ECDH");
+        bobKeyAgreement.init(bobPrivateKey);
+        bobKeyAgreement.doPhase(alicePublicKey, true);
+        byte[] bobSharedSecret = bobKeyAgreement.generateSecret();
+
+        // Check if the shared secrets are the same
+        if (MessageDigest.isEqual(aliceSharedSecret, bobSharedSecret)) {
+            System.out.println("Shared secrets match!");
+            System.out.println("Shared Secret (Hexadecimal): " + bytesToHex(aliceSharedSecret));
+        } else {
+            System.out.println("Shared secrets do not match!");
+        }
+    }
+
+    // Utility method to convert bytes to hexadecimal string
+    private static String bytesToHex(byte[] bytes) {
+        StringBuilder result = new StringBuilder();
+        for (byte b : bytes) {
+            result.append(String.format("%02X", b));
+        }
+        return result.toString();
+    }
+}
