@@ -1,0 +1,41 @@
+1. eclipse download--   https://www.eclipse.org/downloads/ 
+
+(after download select java for enter prise and web developers)
+(after installing click launch)
+
+
+2. jdk downlaod -- https://www.oracle.com/in/java/technologies/downloads/#jdk17-windows
+
+3. path setting   -- go to this pc--right click--propery ---  advanced  ---environmental variable---(2 box) path--edit--paste jdk downloaded bin path(C:\Program Files\Java\jdk-17\bin)
+
+4. JDBC
+search( mysql jdbc driver jar download -- in website)  first link--platform independent -- zip  -- start my download
+
+After downloading extract...
+go to the project.--- new folder(driver) --paste the extract jdbc jar--
+right click on project--build path--- configure path--classpath--add  jar--(select jar from driver/jdbc jar)
+
+5. apache server--
+search apache tomcat server---click the first link-- go to download and download based on version (32bit/64 bit window installer)=-- 
+after download -- run as administrator---ok-ok-finish
+
+
+Go to eclipse ide=--- right side corner click open perspective --- java EE default -- (see console server is newly show)
+click server--add server--seleect version --copy and paste the installed path of tom cat --.
+
+
+
+
+
+delet--modufle-info.java
+
+Project boostrap downoad
+https://getbootstrap.com/docs/5.3/getting-started/download/
+
+
+create dynamic web project -- project name-- target run time-- click next , next , select web.xml
+check step 5
+create folder called driver(paste jdbc jar) -- right click on project- build path -- library -- class path -- add jar  - selectjdbc jar (from driver)  -apply , apply and close;
+copy that jar in web/inf -- lib --(paste jar)
+
+	
